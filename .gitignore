@@ -1,0 +1,6 @@
+cntk/lib/*.so
+cntk/lib/*.so.*
+cntk/Include/*.h
+.idea
+cmake-build-debug
+cmake-build-release

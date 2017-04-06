@@ -2175,8 +2175,8 @@ ReadWeights()
   std::string networkConfiguration;
   // with the ones specified.
   //networkConfiguration += "outputNodeNames=\"h1.z:ol.z\"\n";
-  if (!use_gpu)
-    networkConfiguration += "deviceId=-1\n";
+
+  networkConfiguration += use_gpu ? "deviceId=0\n" : "deviceId=-1\n"; //otherwise I have to run as root
   networkConfiguration += "modelPath=\"";
   networkConfiguration += uct_params_path;
   networkConfiguration += "/model.bin\"";
