@@ -81,6 +81,8 @@ double remaining_time[S_MAX];
 // UCTのノード
 uct_node_t *uct_node;
 
+std::map<int, std::shared_ptr<std::vector<float>>> policy_evals;
+
 // プレイアウト情報
 static po_info_t po_info;
 
@@ -2176,7 +2178,8 @@ ReadWeights()
   // with the ones specified.
   //networkConfiguration += "outputNodeNames=\"h1.z:ol.z\"\n";
 
-  networkConfiguration += use_gpu ? "deviceId=0\n" : "deviceId=-1\n"; //otherwise I have to run as root
+  if (!use_gpu)
+    networkConfiguration += "deviceId=-1\n";
   networkConfiguration += "modelPath=\"";
   networkConfiguration += uct_params_path;
   networkConfiguration += "/model.bin\"";
@@ -2221,6 +2224,14 @@ EvalPolicy(const std::vector<std::shared_ptr<policy_eval_req>>& requests, std::v
       moves[i + ofs] = exp(moves[i + ofs]);
       sum += moves[i + ofs];
     }
+
+    auto policy_eval = std::make_shared<std::vector<float>>();
+    policy_eval->reserve((unsigned long) pure_board_max);
+    for (int i = 0; i < pure_board_max; i++){
+      (*policy_eval)[i] = max(moves[i + ofs], 0.0f) / sum;
+    }
+    policy_evals[index] = policy_eval;
+
     LOCK_NODE(index);
 
     int depth = req->depth;

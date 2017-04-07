@@ -3,6 +3,9 @@
 
 #include <atomic>
 #include <random>
+#include <map>
+#include <vector>
+#include <memory>
 
 #include "GoBoard.h"
 #include "ZobristHash.h"
@@ -104,7 +107,7 @@ struct uct_node_t {
   int width;                          // 探索幅
   int child_num;                      // 子ノードの数
   child_node_t child[UCT_CHILD_MAX];  // 子ノードの情報
-  statistic_t statistic[BOARD_MAX];   // 統計情報 
+  statistic_t statistic[BOARD_MAX];   // 統計情報
   bool seki[BOARD_MAX];
   bool evaled;
   //std::atomic<double> value;
@@ -128,6 +131,8 @@ struct rate_order_t {
 extern double remaining_time[S_MAX];
 // UCTのノード
 extern uct_node_t *uct_node;
+
+extern std::map<int, std::shared_ptr<std::vector<float>>> policy_evals;
 
 // 現在のルートのインデックス
 extern int current_root;
