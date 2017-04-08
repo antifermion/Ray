@@ -81,7 +81,7 @@ double remaining_time[S_MAX];
 // UCTのノード
 uct_node_t *uct_node;
 
-std::map<int, std::shared_ptr<std::vector<float>>> policy_evals;
+std::map<int, std::shared_ptr<std::vector<double>>> policy_evals;
 
 // プレイアウト情報
 static po_info_t po_info;
@@ -229,6 +229,21 @@ void
 SetConstTime(double time)
 {
   const_thinking_time = time;
+}
+
+
+void
+UpdatePlayout( void )
+{
+  if (mode == CONST_PLAYOUT_MODE) {
+    time_limit = 100000.0;
+    po_info.num = playout;
+    extend_time = false;
+  } else if (mode == CONST_TIME_MODE) {
+    time_limit = const_thinking_time;
+    po_info.num = 100000000;
+    extend_time = false;
+  }
 }
 
 
@@ -2228,7 +2243,7 @@ EvalPolicy(const std::vector<std::shared_ptr<policy_eval_req>>& requests, std::v
     auto policy_eval = std::make_shared<std::vector<float>>();
     policy_eval->reserve((unsigned long) pure_board_max);
     for (int i = 0; i < pure_board_max; i++){
-      (*policy_eval)[i] = max(moves[i + ofs], 0.0f) / sum;
+      (*policy_eval)[i] = max(moves[i + ofs], 0.0) / sum;
     }
     policy_evals[index] = policy_eval;
 

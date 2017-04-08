@@ -132,7 +132,7 @@ extern double remaining_time[S_MAX];
 // UCTのノード
 extern uct_node_t *uct_node;
 
-extern std::map<int, std::shared_ptr<std::vector<float>>> policy_evals;
+extern std::map<int, std::shared_ptr<std::vector<double>>> policy_evals;
 
 // 現在のルートのインデックス
 extern int current_root;
@@ -158,6 +158,8 @@ void SetPlayout( int po );
 
 // 1手あたりの思考時間の指定
 void SetConstTime( double time );
+
+void UpdatePlayout( void );
 
 // 使用するスレッド数の指定
 void SetThread( int new_thread );

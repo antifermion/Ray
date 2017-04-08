@@ -19,6 +19,7 @@ enum COMMAND {
   COMMAND_NO_GPU,
   COMMAND_NO_EXPAND,
   COMMAND_ANALYSIS_MODE,
+  COMMAND_NO_WARNINGS,
   COMMAND_MAX,
 };
 
@@ -27,5 +28,7 @@ enum COMMAND {
 void AnalyzeCommand( int argc, char **argv );
 
 bool GetAnalysisMode( void );
+
+bool GetWarningsEnabled( void );
 
 #endif
