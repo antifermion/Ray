@@ -12,16 +12,6 @@ using json = nlohmann::json;
 
 typedef void (*RequestHandler)(const json&);
 
-void AnalysePosition(const json& request);
-void AnalyseGame(const json& request);
-void ErrorResponse(const std::string& message);
-void Quit(const json& request);
-void UpdateTimeSettings(const json &request);
-void SetGameSettings(const json &request);
-void SetFixedHandicap(int stones);
-void SetFreeHandicap(const json& stones);
-void WarnResponse(const std::string& message);
-
 struct Position {
   const int x, y;
   Position(const int x, const int y) : x{x}, y{y} {}
@@ -30,13 +20,13 @@ struct Position {
       return PASS;
     return POS(x + OB_SIZE, y + OB_SIZE);
   }
-  const bool IsValid() const {
+  virtual const bool IsValid() const {
     return (x >= 0 && y >= 0 && x < pure_board_size && y < pure_board_size) || IsPass();
   }
   const bool IsPass() const {
     return x == -1 && y == -1;
   }
-  static Position FromJson(const json& pos) const {
+  static Position FromJson(const json& pos) {
     int x = -2, y = -2;
     if (pos.is_object()){
       const json& jx = pos["x"];
@@ -49,6 +39,79 @@ struct Position {
     return Position(x, y);
   }
 };
+
+struct Move : Position {
+  const stone color;
+  Move(const Position& position, const stone color) : Position(position.x, position.y), color {color} {}
+  virtual const bool IsValid() const {
+    return Position::IsValid() && (color == S_BLACK || color == S_WHITE);
+  }
+  static Move FromJson(const json& move) {
+    const Position position = Position::FromJson(move);
+    stone color = S_EMPTY;
+    if (move.is_object()){
+      const json& jcolor = move["color"];
+      if (jcolor.is_string()){
+        const std::string scolor = jcolor;
+        if (scolor == "black")
+          color = S_BLACK;
+        else if (scolor == "white")
+          color = S_WHITE;
+      }
+    }
+    return Move(position, color);
+  }
+};
+
+struct MoveTree : Move {
+  const std::vector<std::shared_ptr<MoveTree>> next_moves;
+  const bool is_root;
+
+  MoveTree(const Move& move, const std::vector<std::shared_ptr<MoveTree>> next_moves, const bool is_root = false)
+      : Move({move.x, move.y}, move.color), next_moves {next_moves}, is_root {is_root} {}
+
+  static std::shared_ptr<MoveTree> FromJson(const json& tree){
+    const json& next = tree.is_object() ? tree["next"] : tree;
+    std::vector<std::shared_ptr<MoveTree>> next_moves;
+    if (next.is_object()){
+      next_moves.push_back(FromJson(next));
+      if (next_moves.back() == nullptr) return nullptr;
+    } else if (next.is_array()){
+      next_moves.reserve(next.size());
+      for (const json& next_move : next){
+        if (!next_move.is_object()) return nullptr;
+        next_moves.push_back(FromJson(next_move));
+      }
+      if (next_moves.back() == nullptr) return nullptr;
+    } else {
+      return nullptr;
+    }
+
+    if (tree.is_array()){
+      return std::make_shared<MoveTree>(Move({-3, -3}, S_EMPTY), next_moves, true);
+    }
+    Move move = Move::FromJson(tree);
+    if (!move.IsValid()) return nullptr;
+    return std::make_shared<MoveTree>(move, next_moves);
+  }
+  virtual const bool IsValid() const {
+    return Move::IsValid() || is_root;
+  }
+  const bool IsLeaf() const {
+    return next_moves.empty();
+  }
+};
+
+void AnalysePosition(const json& request);
+void AnalyseGame(const json& request);
+void ErrorResponse(const std::string& message);
+void Quit(const json& request);
+void UpdateTimeSettings(const json &request);
+void ApplyGameSettings(const json &request);
+void SetFixedHandicap(int stones);
+void SetFreeHandicap(const json& stones);
+void WarnResponse(const std::string& message);
+bool SetupGame(const std::shared_ptr<MoveTree> tree);
 
 static bool stop_analysis = false;
 
@@ -72,12 +135,27 @@ void WarnResponse(const std::string& message){
 
 void AnalysePosition(const json& request){
   UpdateTimeSettings(request);
-  SetGameSettings(request);
+  ApplyGameSettings(request);
+  auto tree = MoveTree::FromJson(request["game"]);
+  if (tree == nullptr){
+    ErrorResponse("Invalid game.");
+    return;
+  }
+  if (!SetupGame(tree)){
+    ErrorResponse("Invalid move in game");
+  }
+}
+
+bool SetupGame(const std::shared_ptr<MoveTree> tree){
+  if (tree->is_root && tree->IsLeaf()) return true;
+  if (tree->is_root || tree->IsPass()) return SetupGame(tree->next_moves[0]);
+  if (!IsLegal(game, tree->ToBoardPosition(), tree->color)) return false;
+  PutStone(game, tree->ToBoardPosition(), tree->color);
+  return tree->IsLeaf() || SetupGame(tree->next_moves[0]);
 }
 
 void AnalyseGame(const json& request) {
-  UpdateTimeSettings(request);
-  SetGameSettings(request);
+  ErrorResponse("Not yet implemented.");
 }
 
 void UpdateTimeSettings(const json &request) {
@@ -103,7 +181,7 @@ void UpdateTimeSettings(const json &request) {
   }
 }
 
-void SetGameSettings(const json &request) {
+void ApplyGameSettings(const json &request) {
   FreeGame(game);
   game = AllocateGame();
   InitializeBoard(game);

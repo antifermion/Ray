@@ -2240,10 +2240,10 @@ EvalPolicy(const std::vector<std::shared_ptr<policy_eval_req>>& requests, std::v
       sum += moves[i + ofs];
     }
 
-    auto policy_eval = std::make_shared<std::vector<float>>();
+    auto policy_eval = std::make_shared<std::vector<double>>();
     policy_eval->reserve((unsigned long) pure_board_max);
     for (int i = 0; i < pure_board_max; i++){
-      (*policy_eval)[i] = max(moves[i + ofs], 0.0) / sum;
+      (*policy_eval)[i] = max((double) moves[i + ofs], 0.0) / sum;
     }
     policy_evals[index] = policy_eval;
 
