@@ -40,6 +40,7 @@
 #endif
 
 #include "Eval.h"
+#include "Command.h"
 
 using namespace std;
 
@@ -526,7 +527,8 @@ UctSearchGenmove(game_info_t *game, int color)
   DynamicKomi(game, &uct_node[current_root], color);
 
   // 探索時間とプレイアウト回数の予定値を出力
-  PrintPlayoutLimits(time_limit, po_info.halt);
+  //if (!GetAnalysisMode())
+    PrintPlayoutLimits(time_limit, po_info.halt);
 
   for (i = 0; i < threads; i++) {
     t_arg[i].thread_id = i;

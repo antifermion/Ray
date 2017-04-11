@@ -17,27 +17,54 @@ struct Position {
   Position(const int x, const int y) : x{x}, y{y} {}
   const int ToBoardPosition() const {
     if (IsPass())
-      return PASS;
+      return POS_PASS;
     return POS(x + OB_SIZE, y + OB_SIZE);
   }
   virtual const bool IsValid() const {
-    return (x >= 0 && y >= 0 && x < pure_board_size && y < pure_board_size) || IsPass();
+    return IsMove() || IsPass() || IsResign();
+  }
+  const bool IsMove() const {
+    return x >= 0 && y >= 0 && x < pure_board_size && y < pure_board_size;
   }
   const bool IsPass() const {
-    return x == -1 && y == -1;
+    return x == POS_PASS && y == POS_PASS;
+  }
+  const bool IsResign() const {
+    return x == POS_RESIGN && y == POS_RESIGN;
   }
   static Position FromJson(const json& pos) {
-    int x = -2, y = -2;
+    int x = -4, y = -4;
     if (pos.is_object()){
       const json& jx = pos["x"];
       const json& jy = pos["y"];
-      const json& jpass = pos["pass"];
+      const json& jaction = pos["action"];
       if (jx.is_number()) x = jx;
       if (jy.is_number()) y = jy;
-      if (jpass.is_boolean() && jpass == true) x = y = -1;
+      if (jaction.is_string()){
+        if (jaction == "pass") x = y = POS_PASS;
+        if (jaction == "resign") x = y = POS_RESIGN;
+      }
     }
     return Position(x, y);
   }
+  static Position FromBoardPosition(const int pos){
+    if (pos == RESIGN) return Position(POS_RESIGN, POS_RESIGN);
+    if (pos == PASS) return Position(POS_PASS, POS_PASS);
+    return Position(X(pos) - OB_SIZE, Y(pos) - OB_SIZE);
+  }
+  virtual void AddToJson(json& j) const{
+    if (IsPass()){
+      j["action"] = "pass";
+    } else if (IsResign()){
+      j["action"] = "resign";
+    } else {
+      j["x"] = x;
+      j["y"] = y;
+    }
+  }
+private:
+  static const int POS_PASS = -1;
+  static const int POS_RESIGN = -2;
 };
 
 struct Move : Position {
@@ -61,14 +88,17 @@ struct Move : Position {
     }
     return Move(position, color);
   }
+  virtual void AddToJson(json& j) const {
+    Position::AddToJson(j);
+    j["color"] = color == S_BLACK ? "black" : "white";
+  }
 };
 
 struct MoveTree : Move {
   const std::vector<std::shared_ptr<MoveTree>> next_moves;
-  const bool is_root;
 
-  MoveTree(const Move& move, const std::vector<std::shared_ptr<MoveTree>> next_moves, const bool is_root = false)
-      : Move({move.x, move.y}, move.color), next_moves {next_moves}, is_root {is_root} {}
+  MoveTree(const Move& move, const std::vector<std::shared_ptr<MoveTree>> next_moves)
+      : Move({move.x, move.y}, move.color), next_moves {next_moves}{}
 
   static std::shared_ptr<MoveTree> FromJson(const json& tree){
     const json& next = tree.is_object() ? tree["next"] : tree;
@@ -88,18 +118,23 @@ struct MoveTree : Move {
     }
 
     if (tree.is_array()){
-      return std::make_shared<MoveTree>(Move({-3, -3}, S_EMPTY), next_moves, true);
+      return std::make_shared<MoveTree>(Move({ROOT, ROOT}, S_EMPTY), next_moves);
     }
     Move move = Move::FromJson(tree);
     if (!move.IsValid()) return nullptr;
     return std::make_shared<MoveTree>(move, next_moves);
   }
   virtual const bool IsValid() const {
-    return Move::IsValid() || is_root;
+    return Move::IsValid() || IsRoot();
   }
   const bool IsLeaf() const {
     return next_moves.empty();
   }
+  const bool IsRoot() const {
+    return x == ROOT && y == ROOT;
+  }
+private:
+  static const int ROOT = -3;
 };
 
 void AnalysePosition(const json& request);
@@ -112,10 +147,12 @@ void SetFixedHandicap(int stones);
 void SetFreeHandicap(const json& stones);
 void WarnResponse(const std::string& message);
 bool SetupGame(const std::shared_ptr<MoveTree> tree);
+bool SetupGame(const std::vector<Move>& moves);
 
 static bool stop_analysis = false;
 
 static game_info_t * game;
+static stone last_color;
 
 std::map<std::string, RequestHandler> request_handlers;
 
@@ -136,22 +173,59 @@ void WarnResponse(const std::string& message){
 void AnalysePosition(const json& request){
   UpdateTimeSettings(request);
   ApplyGameSettings(request);
-  auto tree = MoveTree::FromJson(request["game"]);
-  if (tree == nullptr){
-    ErrorResponse("Invalid game.");
-    return;
+
+  const json& jtree = request["gameTree"];
+  if (!jtree.is_null()){
+    auto tree = MoveTree::FromJson(request["gameTree"]);
+    if (tree == nullptr){
+      ErrorResponse("Invalid gameTree.");
+      return;
+    }
+    if (!SetupGame(tree)){
+      ErrorResponse("Invalid move in gameTree.");
+      return;
+    }
+  } else {
+    const json& jgame = request["game"];
+    if (!jgame.is_array()){
+      ErrorResponse("No game provided.");
+      return;
+    }
+    std::vector<Move> moves;
+    moves.reserve(jgame.size());
+    for (const json& jmove : jgame){
+      moves.push_back(Move::FromJson(jmove));
+      if (!moves.back().IsValid()){
+        ErrorResponse("Invalid move in game.");
+        return;
+      }
+    }
+    if (!SetupGame(moves)){
+      ErrorResponse("Invalid move in gameTree.");
+      return;
+    }
   }
-  if (!SetupGame(tree)){
-    ErrorResponse("Invalid move in game");
-  }
+
+  UctSearchGenmove(game, FLIP_COLOR(last_color));
 }
 
 bool SetupGame(const std::shared_ptr<MoveTree> tree){
-  if (tree->is_root && tree->IsLeaf()) return true;
-  if (tree->is_root || tree->IsPass()) return SetupGame(tree->next_moves[0]);
-  if (!IsLegal(game, tree->ToBoardPosition(), tree->color)) return false;
-  PutStone(game, tree->ToBoardPosition(), tree->color);
+  last_color = tree->color;
+  if (!tree->IsMove() && tree->IsLeaf()) return true;
+  if (tree->IsMove()){
+    if (!IsLegal(game, tree->ToBoardPosition(), tree->color)) return false;
+    PutStone(game, tree->ToBoardPosition(), tree->color);
+  }
   return tree->IsLeaf() || SetupGame(tree->next_moves[0]);
+}
+
+bool SetupGame(const std::vector<Move>& moves){
+  for(const Move& move : moves){
+    if (!IsLegal(game, move.ToBoardPosition(), move.color)) return false;
+    PutStone(game, move.ToBoardPosition(), move.color);
+  }
+  last_color = moves.back().color;
+  return true;
 }
 
 void AnalyseGame(const json& request) {
