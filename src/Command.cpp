@@ -29,8 +29,7 @@ const string command[COMMAND_MAX] = {
   "--no-early-pass",
   "--no-nn",
   "--no-gpu",
-  "--no-expand",
-  "--analysis-mode"
+  "--no-expand"
 };
 
 const string errmessage[COMMAND_MAX] = {
@@ -49,11 +48,8 @@ const string errmessage[COMMAND_MAX] = {
   "No early pass",
   "Don't use NN",
   "Don't use GPU",
-  "No MCTS",
-  "Launch analysis mode"
+  "No MCTS"
 };
-
-static bool analysis_mode = false;
 
 //////////////////////
 //  コマンドの処理  //
@@ -131,9 +127,6 @@ AnalyzeCommand( int argc, char **argv )
       case COMMAND_NO_EXPAND:
         SetNoExpand(true);
         break;
-      case COMMAND_ANALYSIS_MODE:
-        analysis_mode = true;
-        break;
       default:
 	for (j = 0; j < COMMAND_MAX; j++){
 	  fprintf(stderr, "%-22s : %s\n", command[j].c_str(), errmessage[j].c_str());
@@ -142,8 +135,4 @@ AnalyzeCommand( int argc, char **argv )
     }
   }
 
-}
-
-bool GetAnalysisMode(void) {
-  return analysis_mode;
 }

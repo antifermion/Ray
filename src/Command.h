@@ -18,14 +18,11 @@ enum COMMAND {
   COMMAND_NO_NN,
   COMMAND_NO_GPU,
   COMMAND_NO_EXPAND,
-  COMMAND_ANALYSIS_MODE,
   COMMAND_MAX,
 };
 
 
 // コマンドライン引数のコマンドの解析
 void AnalyzeCommand( int argc, char **argv );
-
-bool GetAnalysisMode( void );
 
 #endif
