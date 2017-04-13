@@ -1,7 +1,7 @@
 #ifndef _GTP_H_
 #define _GTP_H_
 
-const int GTP_COMMAND_NUM = 30;
+const int GTP_COMMAND_NUM = 31;
 
 const int BUF_SIZE = 256;
 
@@ -89,5 +89,7 @@ void GTP_features_store(void);
 void GTP_stat(void);
 //
 void GTP_stat_po(void);
+//
+void GTP_tree(void);
 
 #endif

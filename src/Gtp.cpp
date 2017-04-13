@@ -21,6 +21,7 @@
 #include "Simulation.h"
 #include "Utility.h"
 #include "ZobristHash.h"
+#include "TreeToJson.h"
 
 using namespace std;
 
@@ -155,6 +156,7 @@ GTP_setCommand( void )
   gtpcmd[27].command = STRDUP("_store");
   gtpcmd[28].command = STRDUP("_dump");
   gtpcmd[29].command = STRDUP("_stat");
+  gtpcmd[30].command = STRDUP("_tree");
 
   gtpcmd[ 0].function = GTP_boardsize;
   gtpcmd[ 1].function = GTP_clearboard;
@@ -186,6 +188,7 @@ GTP_setCommand( void )
   gtpcmd[27].function = GTP_features_store;
   gtpcmd[28].function = GTP_features_planes_file;
   gtpcmd[29].function = GTP_stat_po;
+  gtpcmd[30].function = GTP_tree;
 }
 
 
@@ -1233,4 +1236,8 @@ GTP_stat_po(void)
     color = FLIP_COLOR(color);
   }
 #endif
+}
+
+void GTP_tree(void) {
+  TreeToJson(uct_node, current_root);
 }
