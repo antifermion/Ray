@@ -6978,11 +6978,11 @@ class basic_json
             }
 
             // get number of digits for a text -> float -> text round-trip
-            static constexpr auto d = std::numeric_limits<number_float_t>::digits10;
+            //static constexpr auto d = std::numeric_limits<number_float_t>::digits10;
 
             // the actual conversion
             std::ptrdiff_t len = snprintf(number_buffer.data(), number_buffer.size(),
-                                          "%.*g", d, x);
+                                          "%.*g", (int)o.precision(), x);
 
             // negative value indicates an error
             assert(len > 0);

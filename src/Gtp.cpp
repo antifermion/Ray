@@ -1239,5 +1239,6 @@ GTP_stat_po(void)
 }
 
 void GTP_tree(void) {
-  TreeToJson(uct_node, current_root);
+  std::cout << "= ";
+  TreeToJson(uct_node, current_root, game);
 }

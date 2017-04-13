@@ -1,5 +1,6 @@
 #include "TreeToJson.h"
 #include <vector>
+#include <iomanip>
 #include "json.h"
 
 using json = nlohmann::json;
@@ -12,13 +13,16 @@ void ScanTree(const uct_node_t * uct_node, const int index, json& root){
 
   std::vector<double> owner;
   owner.reserve((unsigned long) pure_board_max);
+  double score_black = -komi[0];
   for (int y = board_start; y <= board_end; ++y) {
     for (int x = board_start; x <= board_end; ++x) {
       double own_black = (double)node.statistic[POS(x, y)].colors[S_BLACK] / node.move_count;
       owner.push_back(own_black);
+      score_black += own_black > 0.5 ? 1 : -1;
     }
   }
   root["owner"] = owner;
+  root["score"] = score_black;
 
   if (!node.evaled || node.value_move_count == 0) return; //We are only interested in moves evalued by nn
 
@@ -30,6 +34,8 @@ void ScanTree(const uct_node_t * uct_node, const int index, json& root){
   json& children = root["children"];
   for (int i = 0; i < node.child_num; ++i){
     const auto& child = node.child[i];
+    if (child.value == -1) continue;
+
     children.push_back({});
     json& c = children.back();
     if (child.pos == PASS)
@@ -39,15 +45,15 @@ void ScanTree(const uct_node_t * uct_node, const int index, json& root){
     else
       c["pos"] = CORRECT_POS(child.pos);
     c["pureValue"] = (double)child.value;
-    //std::cerr << c << std::endl;
 
     if (child.index != NOT_EXPANDED)
       ScanTree(uct_node, child.index, c);
   }
 }
 
-void TreeToJson(const uct_node_t * uct_node, const int root) {
+void TreeToJson(const uct_node_t * uct_node, const int root, game_info_t * game) {
   json tree;
+  tree["finalScore"] = CalculateScore(game);
   ScanTree(uct_node, root, tree);
-  std::cout << tree << std::endl;
+  std::cout << std::setprecision(3) << tree << std::endl;
 }
