@@ -13,7 +13,6 @@
 #include "UctRating.h"
 #include "UctSearch.h"
 #include "ZobristHash.h"
-#include "Analysis.h"
 
 
 int
@@ -65,10 +64,7 @@ main( int argc, char **argv )
   InitializeUctHash();
   SetNeighbor();
 
-  if (GetAnalysisMode())
-    Analysis_main();
-  else
-    GTP_main();
+  GTP_main();
 
   return 0;
 }

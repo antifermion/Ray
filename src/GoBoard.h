@@ -47,6 +47,8 @@ const double KOMI = 6.5; // デフォルトのコミの値
 #define CORRECT_X(pos) ((pos) % board_size - OB_SIZE + 1)  // 実際の盤上のx座標
 #define CORRECT_Y(pos) ((pos) / board_size - OB_SIZE + 1)  // 実際の盤上のy座標
 
+#define CORRECT_POS(pos) ((pos) % board_size - OB_SIZE + ((pos) / board_size - OB_SIZE) * pure_board_size)
+
 #define NORTH(pos) ((pos) - board_size)  // posの上の座標
 #define  WEST(pos) ((pos) - 1)           // posの左の座標
 #define  EAST(pos) ((pos) + 1)           // posの右の座標
