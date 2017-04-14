@@ -157,6 +157,8 @@ GTP_setCommand( void )
   gtpcmd[28].command = STRDUP("_dump");
   gtpcmd[29].command = STRDUP("_stat");
   gtpcmd[30].command = STRDUP("_tree");
+  gtpcmd[31].command = STRDUP("_genmove_black_noplay");
+  gtpcmd[32].command = STRDUP("_genmove_white_noplay");
 
   gtpcmd[ 0].function = GTP_boardsize;
   gtpcmd[ 1].function = GTP_clearboard;
@@ -189,6 +191,8 @@ GTP_setCommand( void )
   gtpcmd[28].function = GTP_features_planes_file;
   gtpcmd[29].function = GTP_stat_po;
   gtpcmd[30].function = GTP_tree;
+  gtpcmd[31].function = GTP_genmove;
+  gtpcmd[32].function = GTP_genmove;
 }
 
 
@@ -302,13 +306,15 @@ GTP_genmove( void )
   char pos[10];
   int color;
   int point = PASS;
+  bool play;
   
   command = STRTOK(input_copy, DELIM, &next_token);
   
   CHOMP(command);
-  if (!strcmp("genmove_black", command)) {
+  play = command[0] != '_';
+  if (!strcmp("genmove_black", command) || !strcmp("_genmove_black_noplay", command)) {
     color = S_BLACK;
-  } else if (!strcmp("genmove_white", command)) {
+  } else if (!strcmp("genmove_white", command) || !strcmp("_genmove_black_noplay", command)) {
     color = S_WHITE;
   } else {
     command = STRTOK(NULL, DELIM, &next_token);
@@ -334,7 +340,7 @@ GTP_genmove( void )
     point = SimulationGenmove(game, color);
   else
     point = UctSearchGenmove(game, color);
-  if (point != RESIGN) {
+  if (point != RESIGN && play) {
     PutStone(game, point, color);
   }
   
@@ -342,7 +348,8 @@ GTP_genmove( void )
   
   GTP_response(pos, true);
 
-  UctSearchPondering(game, FLIP_COLOR(color));
+  if (play)
+    UctSearchPondering(game, FLIP_COLOR(color));
 }
 
 

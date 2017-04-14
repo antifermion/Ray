@@ -2180,6 +2180,8 @@ ReadWeights()
 
   if (!use_gpu)
     networkConfiguration += "deviceId=-1\n";
+  else
+    networkConfiguration += "deviceId=0\n";
   networkConfiguration += "modelPath=\"";
   networkConfiguration += uct_params_path;
   networkConfiguration += "/model.bin\"";
