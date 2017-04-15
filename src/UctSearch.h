@@ -132,7 +132,7 @@ extern double remaining_time[S_MAX];
 // UCTのノード
 extern uct_node_t *uct_node;
 
-extern std::map<int, std::vector<double>> policy_evals;
+extern std::map<int, std::vector<std::vector<double>>> policy_evals;
 
 // 現在のルートのインデックス
 extern int current_root;

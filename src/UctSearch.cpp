@@ -40,6 +40,7 @@
 #endif
 
 #include "Eval.h"
+#include "Command.h"
 
 using namespace std;
 
@@ -81,7 +82,7 @@ double remaining_time[S_MAX];
 // UCTのノード
 uct_node_t *uct_node;
 
-std::map<int, std::vector<double>> policy_evals;
+std::map<int, std::vector<std::vector<double>>> policy_evals;
 
 // プレイアウト情報
 static po_info_t po_info;
@@ -2197,6 +2198,7 @@ ReadWeights()
     networkConfiguration += "deviceId=-1\n";
   else
     networkConfiguration += "deviceId=0\n";
+  //networkConfiguration += "lockGPU=false\n";
   networkConfiguration += "modelPath=\"";
   networkConfiguration += uct_params_path;
   networkConfiguration += "/model.bin\"";
@@ -2243,9 +2245,9 @@ EvalPolicy(const std::vector<std::shared_ptr<policy_eval_req>>& requests, std::v
     }
 
     auto& policy_eval = policy_evals[index];
-    policy_eval.reserve((unsigned long) pure_board_max);
+    policy_eval.resize((unsigned long) pure_board_size, std::vector<double>((unsigned long) pure_board_size, 0));
     for (int i = 0; i < pure_board_max; i++){
-      policy_eval[i] = max((double)moves[i + ofs], 0.0) / sum;
+      policy_eval[i % pure_board_size][i / pure_board_size] = max((double)moves[i + ofs], 0.0) / sum;
     }
 
     LOCK_NODE(index);

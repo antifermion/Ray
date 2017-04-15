@@ -8,6 +8,7 @@
 #include <fstream>
 #include <vector>
 #include <random>
+#include <iomanip>
 
 #include "DynamicKomi.h"
 #include "Gtp.h"
@@ -1246,6 +1247,7 @@ GTP_stat_po(void)
 }
 
 void GTP_tree(void) {
-  std::cout << "= ";
-  TreeToJson(uct_node, current_root, game);
+  json tree;
+  TreeToJson(tree, uct_node, current_root, game);
+  std::cout << "= " << std::setprecision(3) << std::endl;
 }
